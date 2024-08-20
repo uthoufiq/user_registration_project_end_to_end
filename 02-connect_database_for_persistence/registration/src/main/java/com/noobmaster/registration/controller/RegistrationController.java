@@ -10,9 +10,11 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
 
 import java.util.Optional;
 
+@RequestMapping("/")
 @Controller
 public class RegistrationController {
 
@@ -47,20 +49,18 @@ public class RegistrationController {
         return "login";  // Render the login page
     }
 
-    @PostMapping("/login")
+    @PostMapping("/login1")
     public String loginForm(@ModelAttribute("user") User user, Model model) {
         try {
             Optional<User> existingUser = userRepository.findByUsername(user.getUsername());
             if (existingUser.isPresent() && passwordEncoder.matches(user.getPassword(), existingUser.get().getPassword())) {
                 model.addAttribute("user", existingUser.get());
                 return "dashboard";
-            } else {
-                model.addAttribute("error", "Invalid username or password");
-                return "login";
             }
         } catch (Exception e) {
             model.addAttribute("error", "An error occured during login. Please try again.");
-            return "login";
+            return "login1";
         }
+        return null;
     }
 }
