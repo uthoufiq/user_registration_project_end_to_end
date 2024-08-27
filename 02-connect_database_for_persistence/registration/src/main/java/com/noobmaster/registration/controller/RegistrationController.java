@@ -2,15 +2,15 @@ package com.noobmaster.registration.controller;
 
 import com.noobmaster.registration.model.User;
 import com.noobmaster.registration.repository.UserRepository;
-import jakarta.persistence.Id;
+import com.noobmaster.registration.security.JwtUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.Optional;
 
@@ -23,44 +23,36 @@ public class RegistrationController {
 
     @Autowired
     private UserRepository userRepository;
+    @Autowired
+    private JwtUtil jwtUtil;
 
-    @GetMapping("/")
-    public String showForm(Model model) {
-        model.addAttribute("user", new User());
-        return "index";
-    }
+    private static final Logger log = LoggerFactory.getLogger(RegistrationController.class);
 
     @PostMapping("/register")
-    public String submitForm(@ModelAttribute("user") User user, Model model) {
+    public ResponseEntity<String> submitForm(@RequestBody User user) {
+        log.info("Received registration request for user: " + user.getUsername());
         Optional<User> existingUser = userRepository.findByUsername(user.getUsername());
         if (existingUser.isPresent()) {
-            model.addAttribute("message", "The " + user.getUsername() + ", already exists");
+            log.warn("User already exists: " + user.getUsername());
+            return ResponseEntity.status(HttpStatus.CONFLICT).body("User already exists.");
         } else {
             user.setPassword(passwordEncoder.encode(user.getPassword()));
             userRepository.save(user);
-            model.addAttribute("message", "Hi " + user.getUsername() + ", your registration was successful!!");
+            log.info("User registered successfully: " + user.getUsername());
+            return ResponseEntity.status(HttpStatus.CREATED).body("Your registration was successful!");
         }
-        return "result";
     }
 
-    @GetMapping("/login")
-    public String showLoginForm(Model model) {
-        model.addAttribute("user", new User());
-        return "login";  // Render the login page
-    }
-
-    @PostMapping("/login1")
-    public String loginForm(@ModelAttribute("user") User user, Model model) {
-        try {
-            Optional<User> existingUser = userRepository.findByUsername(user.getUsername());
-            if (existingUser.isPresent() && passwordEncoder.matches(user.getPassword(), existingUser.get().getPassword())) {
-                model.addAttribute("user", existingUser.get());
-                return "dashboard";
-            }
-        } catch (Exception e) {
-            model.addAttribute("error", "An error occured during login. Please try again.");
-            return "login1";
+    @PostMapping("/login")
+    public ResponseEntity<String> loginUser(@RequestBody User user) {
+        Optional<User> existingUser = userRepository.findByUsername(user.getUsername());
+        if (existingUser.isPresent() && passwordEncoder.matches(user.getPassword(), existingUser.get().getPassword())) {
+            log.info("Login successful: " + user.getUsername());
+            String token = jwtUtil.generateToken(user.getUsername());
+            return ResponseEntity.status(HttpStatus.OK).body("Bearer " + token);
+        } else {
+            log.info("Invalid username or password");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid username or password");
         }
-        return null;
     }
 }
