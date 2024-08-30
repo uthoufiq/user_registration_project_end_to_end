@@ -33,7 +33,7 @@ public class RegistrationController {
         log.info("Received registration request for user: " + user.getUsername());
         Optional<User> existingUser = userRepository.findByUsername(user.getUsername());
         if (existingUser.isPresent()) {
-            log.warn("User already exists: " + user.getUsername());
+            log.warn("User already exists: {}", user.getUsername());
             return ResponseEntity.status(HttpStatus.CONFLICT).body("User already exists.");
         } else {
             user.setPassword(passwordEncoder.encode(user.getPassword()));
